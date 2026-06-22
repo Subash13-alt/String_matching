@@ -1,7 +1,8 @@
-import time
+import streamlit as st
 import random
-import string
 
+
+# ---------------- Naive Search ----------------
 
 def naive_search(text, pattern):
     n, m = len(text), len(pattern)
@@ -23,6 +24,8 @@ def naive_search(text, pattern):
 
     return matches, comparisons
 
+
+# ---------------- KMP ----------------
 
 def compute_lps(pattern):
     m = len(pattern)
@@ -64,7 +67,7 @@ def kmp_search(text, pattern):
                 matches.append(i - j)
                 j = lps[j - 1]
 
-        elif i < n and pattern[j] != text[i]:
+        elif i < n:
             if j != 0:
                 j = lps[j - 1]
             else:
@@ -73,8 +76,13 @@ def kmp_search(text, pattern):
     return matches, comparisons
 
 
+# ---------------- Rabin-Karp ----------------
+
 def rabin_karp(text, pattern, q=101):
     n, m = len(text), len(pattern)
+
+    if m > n:
+        return [], 0
 
     d = 256
     h = pow(d, m - 1, q)
@@ -85,12 +93,10 @@ def rabin_karp(text, pattern, q=101):
     matches = []
     comparisons = 0
 
-    # Initial hash values
     for i in range(m):
         p_hash = (d * p_hash + ord(pattern[i])) % q
         t_hash = (d * t_hash + ord(text[i])) % q
 
-    # Sliding window
     for s in range(n - m + 1):
 
         if p_hash == t_hash:
@@ -115,33 +121,68 @@ def rabin_karp(text, pattern, q=101):
     return matches, comparisons
 
 
-# ---------------- Main Execution ----------------
+# ---------------- Streamlit UI ----------------
 
-text = "AABAACAADAABAABA"
-pattern = "AABA"
+st.set_page_config(page_title="String Matching Algorithms")
 
-print(f"Text: {text}")
-print(f"Pattern: {pattern}")
+st.title("String Matching Algorithms Comparison")
 
-m1, c1 = naive_search(text, pattern)
-m2, c2 = kmp_search(text, pattern)
-m3, c3 = rabin_karp(text, pattern)
+text = st.text_area(
+    "Enter Text",
+    value="AABAACAADAABAABA"
+)
 
-print(f"\nNaive -> Matches at: {m1}, Comparisons: {c1}")
-print(f"KMP   -> Matches at: {m2}, Comparisons: {c2}")
-print(f"RK    -> Matches at: {m3}, Comparisons: {c3}")
+pattern = st.text_input(
+    "Enter Pattern",
+    value="AABA"
+)
 
-# ---------------- Performance Comparison ----------------
+if st.button("Search"):
 
-text_large = ''.join(random.choices('ABCD', k=10000))
-patterns = ['AB', 'ABCD', 'ABCDAB', 'ABCDABCD']
+    if pattern == "":
+        st.error("Pattern cannot be empty.")
 
-print(f'\n{"Pattern":>12} {"Naive":>10} {"KMP":>10} {"RK":>10}')
-print('-' * 50)
+    else:
+        n_match, n_comp = naive_search(text, pattern)
+        k_match, k_comp = kmp_search(text, pattern)
+        r_match, r_comp = rabin_karp(text, pattern)
 
-for p in patterns:
-    _, c1 = naive_search(text_large, p)
-    _, c2 = kmp_search(text_large, p)
-    _, c3 = rabin_karp(text_large, p)
+        st.subheader("Results")
 
-    print(f'{p:>12} {c1:>10} {c2:>10} {c3:>10}')
+        st.write("### Naive Search")
+        st.write("Matches:", n_match)
+        st.write("Comparisons:", n_comp)
+
+        st.write("### KMP Search")
+        st.write("Matches:", k_match)
+        st.write("Comparisons:", k_comp)
+
+        st.write("### Rabin-Karp Search")
+        st.write("Matches:", r_match)
+        st.write("Comparisons:", r_comp)
+
+
+st.divider()
+
+st.subheader("Performance Comparison")
+
+if st.button("Run Performance Test"):
+
+    text_large = ''.join(random.choices('ABCD', k=10000))
+    patterns = ['AB', 'ABCD', 'ABCDAB', 'ABCDABCD']
+
+    data = []
+
+    for p in patterns:
+        _, c1 = naive_search(text_large, p)
+        _, c2 = kmp_search(text_large, p)
+        _, c3 = rabin_karp(text_large, p)
+
+        data.append({
+            "Pattern": p,
+            "Naive": c1,
+            "KMP": c2,
+            "Rabin-Karp": c3
+        })
+
+    st.table(data)
